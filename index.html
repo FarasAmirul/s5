@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard SPK SAW - Toko Binaphoto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6; /* abu-abu terang */
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    input {
+      padding: 5px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #e5e7eb;
+    }
+    .btn {
+      padding: 8px 16px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    canvas {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dashboard SPK - SAW</h1>
+
+  <!-- Form Bobot Kriteria -->
+  <div class="card">
+    <h2>Pengaturan Bobot Kriteria</h2>
+    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px;">
+      <div>
+        <label>Stok</label>
+        <input type="number" step="0.01" id="wStok" value="0.3">
+      </div>
+      <div>
+        <label>Penjualan</label>
+        <input type="number" step="0.01" id="wPenjualan" value="0.3">
+      </div>
+      <div>
+        <label>Lead Time</label>
+        <input type="number" step="0.01" id="wLead" value="0.2">
+      </div>
+      <div>
+        <label>Harga</label>
+        <input type="number" step="0.01" id="wHarga" value="0.2">
+      </div>
+    </div>
+    <small>Jumlah bobot sebaiknya mendekati 1.0 (100%)</small>
+  </div>
+
+  <!-- Form Tambah Barang -->
+  <div class="card">
+    <h2>Tambah Barang Baru</h2>
+    <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:10px;">
+      <div><label>Nama</label><input type="text" id="nama"></div>
+      <div><label>Stok</label><input type="number" id="stok"></div>
+      <div><label>Penjualan</label><input type="number" id="penjualan"></div>
+      <div><label>Lead Time</label><input type="number" id="leadtime"></div>
+      <div><label>Harga</label><input type="number" id="harga"></div>
+    </div>
+    <button class="btn" onclick="tambahBarang()">Tambah Barang</button>
+  </div>
+
+  <!-- Tabel Hasil -->
+  <div class="card">
+    <h2>Rekomendasi Penambahan Stok</h2>
+    <table id="tabelHasil">
+      <thead>
+        <tr>
+          <th>Barang</th>
+          <th>Stok</th>
+          <th>Penjualan</th>
+          <th>Lead Time</th>
+          <th>Harga</th>
+          <th>Skor SAW</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <canvas id="chart" width="400" height="200"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let data = [
+      { nama: "Kertas A4", stok: 20, penjualan: 80, leadtime: 3, harga: 50000 },
+      { nama: "Tinta Printer", stok: 5, penjualan: 60, leadtime: 7, harga: 120000 },
+      { nama: "Pulpen", stok: 50, penjualan: 100, leadtime: 2, harga: 3000 }
+    ];
+
+    function hitungSAW() {
+      let wStok = parseFloat(document.getElementById("wStok").value) || 0;
+      let wPenjualan = parseFloat(document.getElementById("wPenjualan").value) || 0;
+      let wLead = parseFloat(document.getElementById("wLead").value) || 0;
+      let wHarga = parseFloat(document.getElementById("wHarga").value) || 0;
+
+      let maxStok = Math.max(...data.map(d => d.stok));
+      let maxPenjualan = Math.max(...data.map(d => d.penjualan));
+      let minLead = Math.min(...data.map(d => d.leadtime));
+      let minHarga = Math.min(...data.map(d => d.harga));
+
+      let hasil = data.map(d => {
+        let normStok = 1 - d.stok / maxStok;
+        let normPenjualan = d.penjualan / maxPenjualan;
+        let normLead = minLead / d.leadtime;
+        let normHarga = minHarga / d.harga;
+
+        let score = (normStok * wStok) + (normPenjualan * wPenjualan) + 
+                    (normLead * wLead) + (normHarga * wHarga);
+
+        return { ...d, score: score.toFixed(3) };
+      });
+
+      hasil.sort((a, b) => b.score - a.score);
+      renderTabel(hasil);
+      renderChart(hasil);
+    }
+
+    function renderTabel(hasil) {
+      let tbody = document.querySelector("#tabelHasil tbody");
+      tbody.innerHTML = "";
+      hasil.forEach(item => {
+        let row = `<tr>
+          <td>${item.nama}</td>
+          <td>${item.stok}</td>
+          <td>${item.penjualan}</td>
+          <td>${item.leadtime} hari</td>
+          <td>Rp ${item.harga}</td>
+          <td><b>${item.score}</b></td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function renderChart(hasil) {
+      let ctx = document.getElementById('chart').getContext('2d');
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hasil.map(h => h.nama),
+          datasets: [{
+            label: 'Skor SAW',
+            data: hasil.map(h => h.score),
+            backgroundColor: '#4f46e5'
+          }]
+        }
+      });
+    }
+
+    function tambahBarang() {
+      let nama = document.getElementById("nama").value;
+      let stok = parseInt(document.getElementById("stok").value) || 0;
+      let penjualan = parseInt(document.getElementById("penjualan").value) || 0;
+      let leadtime = parseInt(document.getElementById("leadtime").value) || 0;
+      let harga = parseInt(document.getElementById("harga").value) || 0;
+
+      if (nama) {
+        data.push({ nama, stok, penjualan, leadtime, harga });
+        document.getElementById("nama").value = "";
+        document.getElementById("stok").value = "";
+        document.getElementById("penjualan").value = "";
+        document.getElementById("leadtime").value = "";
+        document.getElementById("harga").value = "";
+        hitungSAW();
+      }
+    }
+
+    // hitung awal
+    hitungSAW();
+  </script>
+</body>
+</html>
