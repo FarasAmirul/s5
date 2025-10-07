@@ -3,209 +3,276 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard SPK SAW - Toko Binaphoto</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f4f6; /* abu-abu terang */
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    label {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    input {
-      padding: 5px;
-      margin-bottom: 10px;
-      width: 100%;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #e5e7eb;
-    }
-    .btn {
-      padding: 8px 16px;
-      background: #4f46e5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    canvas {
-      margin-top: 20px;
-    }
-  </style>
+  <title>Rekomendasi Penambahan Stok - SPK SAW</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Dashboard SPK - SAW</h1>
+  <div class="container">
+    <h1>📦 Rekomendasi Penambahan Stok (Metode SAW)</h1>
 
-  <!-- Form Bobot Kriteria -->
-  <div class="card">
-    <h2>Pengaturan Bobot Kriteria</h2>
-    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px;">
-      <div>
-        <label>Stok</label>
-        <input type="number" step="0.01" id="wStok" value="0.3">
-      </div>
-      <div>
-        <label>Penjualan</label>
-        <input type="number" step="0.01" id="wPenjualan" value="0.3">
-      </div>
-      <div>
-        <label>Lead Time</label>
-        <input type="number" step="0.01" id="wLead" value="0.2">
-      </div>
-      <div>
-        <label>Harga</label>
-        <input type="number" step="0.01" id="wHarga" value="0.2">
-      </div>
-    </div>
-    <small>Jumlah bobot sebaiknya mendekati 1.0 (100%)</small>
+    <!-- Pengaturan Bobot -->
+    <section class="bobot-section">
+      <h2>⚙️ Pengaturan Bobot Kriteria</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Stok (cost)</th>
+            <th>Penjualan (benefit)</th>
+            <th>Lead Time (cost)</th>
+            <th>Harga (cost)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input id="bobotStok" type="number" step="0.01" value="0.3" onchange="simpanBobot()"></td>
+            <td><input id="bobotPenjualan" type="number" step="0.01" value="0.3" onchange="simpanBobot()"></td>
+            <td><input id="bobotLead" type="number" step="0.01" value="0.2" onchange="simpanBobot()"></td>
+            <td><input id="bobotHarga" type="number" step="0.01" value="0.2" onchange="simpanBobot()"></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Jumlah bobot sebaiknya mendekati 1.0 (100%)</p>
+      <button id="resetBobot">🔁 Reset Bobot Default</button>
+    </section>
+
+    <!-- Tambah/Edit Barang -->
+    <section class="form-section">
+      <h2 id="formTitle">📝 Tambah Barang Baru</h2>
+      <input id="nama" placeholder="Nama Barang">
+      <input id="stok" type="number" placeholder="Stok">
+      <input id="penjualan" type="number" placeholder="Penjualan">
+      <input id="leadtime" type="number" placeholder="Lead Time">
+      <input id="harga" type="number" placeholder="Harga">
+      <button id="tambahBarang">Tambah Barang</button>
+      <button id="batalEdit" style="display:none; background:#aaa;">Batal</button>
+    </section>
+
+    <!-- Data Barang -->
+    <section class="tabel-section">
+      <h2>📊 Rekomendasi Penambahan Stok</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Barang</th>
+            <th>Stok</th>
+            <th>Penjualan</th>
+            <th>Lead Time</th>
+            <th>Harga</th>
+            <th>Skor SAW</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="barangBody"></tbody>
+      </table>
+    </section>
+
+    <!-- Chart -->
+    <section class="chart-section">
+      <h2>📈 Grafik Skor SAW</h2>
+      <canvas id="chartSAW"></canvas>
+    </section>
   </div>
 
-  <!-- Form Tambah Barang -->
-  <div class="card">
-    <h2>Tambah Barang Baru</h2>
-    <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:10px;">
-      <div><label>Nama</label><input type="text" id="nama"></div>
-      <div><label>Stok</label><input type="number" id="stok"></div>
-      <div><label>Penjualan</label><input type="number" id="penjualan"></div>
-      <div><label>Lead Time</label><input type="number" id="leadtime"></div>
-      <div><label>Harga</label><input type="number" id="harga"></div>
-    </div>
-    <button class="btn" onclick="tambahBarang()">Tambah Barang</button>
-  </div>
-
-  <!-- Tabel Hasil -->
-  <div class="card">
-    <h2>Rekomendasi Penambahan Stok</h2>
-    <table id="tabelHasil">
-      <thead>
-        <tr>
-          <th>Barang</th>
-          <th>Stok</th>
-          <th>Penjualan</th>
-          <th>Lead Time</th>
-          <th>Harga</th>
-          <th>Skor SAW</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <canvas id="chart" width="400" height="200"></canvas>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    let data = [
-      { nama: "Kertas A4", stok: 20, penjualan: 80, leadtime: 3, harga: 50000 },
-      { nama: "Tinta Printer", stok: 5, penjualan: 60, leadtime: 7, harga: 120000 },
-      { nama: "Pulpen", stok: 50, penjualan: 100, leadtime: 2, harga: 3000 }
-    ];
+    const API_URL = "http://localhost:5000/barang";
+    let dataBarang = [];
+    let editId = null;
 
-    function hitungSAW() {
-      let wStok = parseFloat(document.getElementById("wStok").value) || 0;
-      let wPenjualan = parseFloat(document.getElementById("wPenjualan").value) || 0;
-      let wLead = parseFloat(document.getElementById("wLead").value) || 0;
-      let wHarga = parseFloat(document.getElementById("wHarga").value) || 0;
-
-      let maxStok = Math.max(...data.map(d => d.stok));
-      let maxPenjualan = Math.max(...data.map(d => d.penjualan));
-      let minLead = Math.min(...data.map(d => d.leadtime));
-      let minHarga = Math.min(...data.map(d => d.harga));
-
-      let hasil = data.map(d => {
-        let normStok = 1 - d.stok / maxStok;
-        let normPenjualan = d.penjualan / maxPenjualan;
-        let normLead = minLead / d.leadtime;
-        let normHarga = minHarga / d.harga;
-
-        let score = (normStok * wStok) + (normPenjualan * wPenjualan) + 
-                    (normLead * wLead) + (normHarga * wHarga);
-
-        return { ...d, score: score.toFixed(3) };
-      });
-
-      hasil.sort((a, b) => b.score - a.score);
-      renderTabel(hasil);
-      renderChart(hasil);
+    // ==================== CRUD BARANG ====================
+    async function ambilBarang() {
+      const res = await fetch(API_URL);
+      dataBarang = await res.json();
+      hitungDanRender();
     }
 
-    function renderTabel(hasil) {
-      let tbody = document.querySelector("#tabelHasil tbody");
-      tbody.innerHTML = "";
-      hasil.forEach(item => {
-        let row = `<tr>
-          <td>${item.nama}</td>
-          <td>${item.stok}</td>
-          <td>${item.penjualan}</td>
-          <td>${item.leadtime} hari</td>
-          <td>Rp ${item.harga}</td>
-          <td><b>${item.score}</b></td>
-        </tr>`;
-        tbody.innerHTML += row;
-      });
+    async function tambahBarang() {
+      const nama_barang = document.getElementById('nama').value;
+      const stok = +document.getElementById('stok').value;
+      const penjualan = +document.getElementById('penjualan').value;
+      const leadtime = +document.getElementById('leadtime').value;
+      const harga = +document.getElementById('harga').value;
+
+      if (!nama_barang || !stok || !penjualan || !leadtime || !harga) {
+        alert("Isi semua kolom terlebih dahulu!");
+        return;
+      }
+
+      const data = { nama_barang, stok, penjualan, leadtime, harga };
+
+      if (editId) {
+        // Update data
+        await fetch(`${API_URL}/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        editId = null;
+        document.getElementById('formTitle').innerText = "📝 Tambah Barang Baru";
+        document.getElementById('tambahBarang').innerText = "Tambah Barang";
+        document.getElementById('batalEdit').style.display = "none";
+      } else {
+        // Tambah data baru
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+      }
+
+      kosongkanForm();
+      ambilBarang();
     }
 
-    function renderChart(hasil) {
-      let ctx = document.getElementById('chart').getContext('2d');
-      if (window.barChart) window.barChart.destroy();
-      window.barChart = new Chart(ctx, {
-        type: 'bar',
+    function mulaiEdit(id) {
+      const barang = dataBarang.find(b => b.id_barang === id);
+      if (!barang) return;
+      editId = id;
+      document.getElementById('formTitle').innerText = "✏️ Edit Barang";
+      document.getElementById('tambahBarang').innerText = "Simpan Perubahan";
+      document.getElementById('batalEdit').style.display = "inline-block";
+
+      document.getElementById('nama').value = barang.nama_barang;
+      document.getElementById('stok').value = barang.stok;
+      document.getElementById('penjualan').value = barang.penjualan;
+      document.getElementById('leadtime').value = barang.leadtime;
+      document.getElementById('harga').value = barang.harga;
+    }
+
+    function kosongkanForm() {
+      document.getElementById('nama').value = "";
+      document.getElementById('stok').value = "";
+      document.getElementById('penjualan').value = "";
+      document.getElementById('leadtime').value = "";
+      document.getElementById('harga').value = "";
+    }
+
+    function batalEdit() {
+      editId = null;
+      document.getElementById('formTitle').innerText = "📝 Tambah Barang Baru";
+      document.getElementById('tambahBarang').innerText = "Tambah Barang";
+      document.getElementById('batalEdit').style.display = "none";
+      kosongkanForm();
+    }
+
+    async function hapusBarang(id) {
+      if (!confirm("Hapus barang ini?")) return;
+      await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      ambilBarang();
+    }
+
+    document.getElementById('tambahBarang').onclick = tambahBarang;
+    document.getElementById('batalEdit').onclick = batalEdit;
+
+    document.getElementById('resetBobot').onclick = () => {
+      document.getElementById('bobotStok').value = 0.3;
+      document.getElementById('bobotPenjualan').value = 0.3;
+      document.getElementById('bobotLead').value = 0.2;
+      document.getElementById('bobotHarga').value = 0.2;
+      simpanBobot();
+    };
+
+    // ==================== SIMPAN DAN MUAT BOBOT ====================
+    function simpanBobot() {
+      const bobot = {
+        stok: parseFloat(document.getElementById('bobotStok').value),
+        penjualan: parseFloat(document.getElementById('bobotPenjualan').value),
+        lead: parseFloat(document.getElementById('bobotLead').value),
+        harga: parseFloat(document.getElementById('bobotHarga').value)
+      };
+      localStorage.setItem('bobotSAW', JSON.stringify(bobot));
+      hitungDanRender();
+    }
+
+    function muatBobot() {
+      const bobot = JSON.parse(localStorage.getItem('bobotSAW'));
+      if (bobot) {
+        document.getElementById('bobotStok').value = bobot.stok;
+        document.getElementById('bobotPenjualan').value = bobot.penjualan;
+        document.getElementById('bobotLead').value = bobot.lead;
+        document.getElementById('bobotHarga').value = bobot.harga;
+      }
+    }
+
+    // ==================== HITUNG SAW ====================
+    function hitungDanRender() {
+      const wStok = parseFloat(document.getElementById('bobotStok').value);
+      const wPen = parseFloat(document.getElementById('bobotPenjualan').value);
+      const wLead = parseFloat(document.getElementById('bobotLead').value);
+      const wHarga = parseFloat(document.getElementById('bobotHarga').value);
+
+      const total = wStok + wPen + wLead + wHarga;
+      if (Math.abs(total - 1.0) > 0.05) {
+        console.warn('⚠️ Jumlah bobot sebaiknya mendekati 1.0');
+      }
+
+      const body = document.getElementById('barangBody');
+      body.innerHTML = "";
+
+      if (dataBarang.length === 0) return;
+
+      const maxPen = Math.max(...dataBarang.map(d => d.penjualan));
+      const minStok = Math.min(...dataBarang.map(d => d.stok));
+      const minLead = Math.min(...dataBarang.map(d => d.leadtime));
+      const minHarga = Math.min(...dataBarang.map(d => d.harga));
+
+      dataBarang.forEach(d => {
+        const nStok = minStok / d.stok;
+        const nPen = d.penjualan / maxPen;
+        const nLead = minLead / d.leadtime;
+        const nHarga = minHarga / d.harga;
+
+        const skor = (nStok * wStok) + (nPen * wPen) + (nLead * wLead) + (nHarga * wHarga);
+        d.skor = skor;
+      });
+
+      dataBarang.sort((a, b) => b.skor - a.skor);
+
+      dataBarang.forEach(d => {
+        body.innerHTML += `
+          <tr>
+            <td>${d.nama_barang}</td>
+            <td>${d.stok}</td>
+            <td>${d.penjualan}</td>
+            <td>${d.leadtime}</td>
+            <td>${d.harga}</td>
+            <td>${d.skor.toFixed(3)}</td>
+            <td>
+              <button style="background:#f39c12" onclick="mulaiEdit(${d.id_barang})">Edit</button>
+              <button style="background:#e74c3c" onclick="hapusBarang(${d.id_barang})">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      renderChart();
+    }
+
+    // ==================== CHART ====================
+    let chart;
+    function renderChart() {
+      const ctx = document.getElementById("chartSAW").getContext("2d");
+      const labels = dataBarang.map(d => d.nama_barang);
+      const values = dataBarang.map(d => d.skor);
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "bar",
         data: {
-          labels: hasil.map(h => h.nama),
+          labels,
           datasets: [{
-            label: 'Skor SAW',
-            data: hasil.map(h => h.score),
-            backgroundColor: '#4f46e5'
+            label: "Skor SAW",
+            data: values,
+            backgroundColor: "#1976d2"
           }]
         }
       });
     }
 
-    function tambahBarang() {
-      let nama = document.getElementById("nama").value;
-      let stok = parseInt(document.getElementById("stok").value) || 0;
-      let penjualan = parseInt(document.getElementById("penjualan").value) || 0;
-      let leadtime = parseInt(document.getElementById("leadtime").value) || 0;
-      let harga = parseInt(document.getElementById("harga").value) || 0;
-
-      if (nama) {
-        data.push({ nama, stok, penjualan, leadtime, harga });
-        document.getElementById("nama").value = "";
-        document.getElementById("stok").value = "";
-        document.getElementById("penjualan").value = "";
-        document.getElementById("leadtime").value = "";
-        document.getElementById("harga").value = "";
-        hitungSAW();
-      }
-    }
-
-    // hitung awal
-    hitungSAW();
+    // ==================== LOAD SAAT PERTAMA ====================
+    document.addEventListener("DOMContentLoaded", () => {
+      muatBobot();
+      ambilBarang();
+    });
   </script>
 </body>
 </html>
